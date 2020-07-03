@@ -23,6 +23,7 @@ import ds from "./Services/dataService";
 import ManagerProfile from "./Profile/Manager/ManagerProfile";
 import authService from "./Services/AuthService";
 import RestaurantReservation from "./Reservation/RestaurantReservation";
+import customerReserve from './Reservation/customerReserve';
 
 class App extends Component {
   queryUserInfo = async function (userType) {
@@ -129,6 +130,7 @@ class App extends Component {
           <Route exact path="/Login" render={() => <Login />} />
           <Route path="/logout" component={Logout} />
           <Route path="/layout" component={Layout} />
+          <Route path="/customerReserve" component={customerReserve} />
           <Route
             exact
             path="/ViewCustomerProfile"
