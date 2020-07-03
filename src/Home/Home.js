@@ -7,8 +7,31 @@ class Home extends Component {
         return (
             <MainContainer>
                 <div className="container">
-                    
-                    <h1>Hello</h1>
+                    <header className="jumbotron my-4">
+                        <h1 className="display-3">Welcome to BookIt!</h1>
+                        <p>Find the best restaurants here</p>
+                        <input className="form-control" type="text" placeholder="Search" aria-label="Search" />
+                    </header>
+                    <div className="card" >
+                        <div className="card-body">
+                            <h5 className="card-title">Daily Pick Up</h5>
+                            <p className="card-text">Some Restaurants</p>
+                        </div>
+                    </div>
+                     <br></br>
+                    <div className="card" >
+                        <div className="card-body">
+                            <h5 className="card-title">Feature Restaurants</h5>
+                            <p className="card-text">Some Restaurants</p>
+                        </div>
+                    </div>
+                    <br></br>
+                    <div className="card" >
+                        <div className="card-body">
+                            <h5 className="card-title">Favorite Restaurant</h5>
+                            <p className="card-text">Some Restaurants</p>
+                        </div>
+                    </div>
                 </div>
             </MainContainer>
 

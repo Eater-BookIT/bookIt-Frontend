@@ -8,9 +8,9 @@ class MainContainer extends Component {
       <div>
         <div className="body">
           <div className="container">
-            {/* <div className="container center_div"> */}
+           
             {this.props.children}
-            {/* </div> */}
+           
           </div>
         </div>
       </div>

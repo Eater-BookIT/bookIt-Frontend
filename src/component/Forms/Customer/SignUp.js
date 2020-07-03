@@ -1,9 +1,56 @@
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
-import MainContainer from '../Style/MainContainer'
+import { gapi } from 'gapi-script';
+import MainContainer from '../../Style/MainContainer'
+import './SignUp.css'
 import Parser from 'html-react-parser'
 import $ from 'jquery'
+import Axios from 'axios'
+import sha256 from 'crypto-js/sha256';
+import serverAddress from '../../../Services/ServerUrl';
+import FacebookLogin from 'react-facebook-login/dist/facebook-login-render-props'
+import Facebook from '../../../Image/FaceSign.jpg'
 
+
+//Validation 
+const regExpEmail = RegExp(
+  /^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[A-Za-z]+$/
+);
+
+const regExpPhone = RegExp(
+  /^\(?([0-9]{3})\)?[-.●]?([0-9]{3})[-.●]?([0-9]{4})$/
+);
+
+const regExpPassword = RegExp(
+  /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{6,32}$/
+);
+
+//Facebook
+const responseFacebook = (response) => {
+  console.log(response);
+};
+
+const formValid = ({ isError, ...rest }) => {
+  let isValid = false;
+
+  Object.values(isError).forEach((val) => {
+    if (val.length > 0) {
+      isValid = false;
+    } else {
+      isValid = true;
+    }
+  });
+
+  Object.values(rest).forEach((val) => {
+    if (val === null) {
+      isValid = false;
+    } else {
+      isValid = true;
+    }
+  });
+
+  return isValid;
+};
 
 class SignUp extends Component {
   constructor(props) {
@@ -15,6 +62,7 @@ class SignUp extends Component {
       phonenumber: "",
       password: "",
       confirmpw: "",
+      isSignedIn: false,
       isError: {
         firstname: "&#160;",
         lastname: "&#160;",
@@ -31,10 +79,153 @@ class SignUp extends Component {
 
   handleChange = (e) => {
     e.preventDefault();
+    const { name, value } = e.target;
+    let isError = { ...this.state.isError };
+    switch (name) {
+      case "firstname":
+        isError.firstname =
+          value.length >= 2 && value.length <= 32 ? "&#160;" : "Atleast 2 character required";
+
+        break;
+      case "lastname":
+        isError.lastname =
+          value.length >= 2 && value.length <= 32 ? "&#160;" : "Atleast 2 character required";
+        break;
+      case "email":
+        isError.email = regExpEmail.test(value)
+          ? "&#160;"
+          : "Email address is invalid";
+        break;
+      case "phonenumber":
+        isError.phonenumber = regExpPhone.test(value)
+          ? "&#160;"
+          : "Phone Number is invalid";
+        break;
+      case "password":
+        isError.password = regExpPassword.test(value)
+          ? "&#160;"
+          : "Atleast 6 characters required";
+        this.state.password = value;
+        break;
+      case "confirmpw":
+        this.state.confirmpw = value;
+        isError.confirmpw =
+          this.state.confirmpw === this.state.password ? "&#160;" : "Password not matching"
+        break;
+      default:
+        break;
+    }
+    this.setState({
+      isError,
+      [e.target.id]: e.target.value,
+    });
   };
 
   handleSubmit = (e) => {
     e.preventDefault();
+    if (formValid(this.state)) {
+      this.state.password = sha256(this.state.password).toString(); //hashing password
+      this.state.confirmpw = sha256(this.state.confirmpw).toString()
+      console.log(this.state)
+      Axios.post(serverAddress + "/customersignup", this.state).then(res => {
+        console.log(res)
+        if (res.data.errcode === 0) {
+          $("#signResultText").text("Congrats, You can now log into BookIt using your account").removeClass("alert-warning").removeClass("alert-danger").removeClass("alert-success")
+            .addClass("alert-success");
+        } else {
+          $("#signResultText").text("Sorry, " + res.data.errmsg).removeClass("alert-warning").removeClass("alert-danger").removeClass("alert-success")
+            .addClass("alert-danger");;
+        }
+      }).catch(err => {
+        console.log(err)
+      })
+
+    } else {
+      console.log("Form is invalid!");
+    }
+  }
+
+  // Google Sign In 
+
+  onSuccess() {
+    console.log('on success')
+    this.setState({
+      isSignedIn: true,
+      err: null
+    })
+  }
+
+  onLoginFailed(err) {
+    this.setState({
+      isSignedIn: false,
+      error: err,
+    })
+  }
+
+  getContent() {
+    if (this.state.isSignedIn) {
+      return <p>hello user, you're signed in </p>
+    } else {
+      return (
+        <div>
+          <p>You are not signed in. Click here to sign in.</p>
+          <button id="loginButton">Login with Google</button>
+        </div>
+      )
+    }
+
+  }
+
+  componentDidMount() {
+    const successCallback = this.onSuccess.bind(this);
+    // Avoid spacing on the form
+    var t1 = document.getElementById("firstname");
+    t1.onkeypress = function (event) {
+      if (event.keyCode === 32) return false;
+    };
+    var t2 = document.getElementById("email");
+    t2.onkeypress = function (e) {
+      if (e.keyCode === 32) return false;
+    };
+    var t3 = document.getElementById("password");
+    t3.onkeypress = function (e) {
+      if (e.keyCode === 32) return false;
+    };
+    var t4 = document.getElementById("confirmpw");
+    t4.onkeypress = function (e) {
+      if (e.keyCode === 32) return false;
+    };
+    // Accept term and condition click link
+    $("#conditionbtn").on("click", () => {
+      $("#accept-terms").removeAttr("disabled");
+    })
+
+    //Google Sign In
+    window.gapi.load('auth2', () => {
+      this.auth2 = gapi.auth2.init({
+        client_id: '377822834291-u5q8t038me7rn1k5gieq1b6qrohgqedf.apps.googleusercontent.com',
+      })
+
+      this.auth2.then(() => {
+        console.log('on init');
+        this.setState({
+          isSignedIn: this.auth2.isSignedIn.get(),
+        });
+      });
+    });
+
+    window.gapi.load('signin2', function () {
+      // Method 3: render a sign in button
+      // using this method will show Signed In if the user is already signed in
+      var opts = {
+        width: 200,
+        height: 50,
+        client_id: '377822834291-u5q8t038me7rn1k5gieq1b6qrohgqedf.apps.googleusercontent.com',
+        onsuccess: successCallback
+      }
+      gapi.signin2.render('loginButton', opts)
+    })
+
 
   }
 
@@ -50,7 +241,6 @@ class SignUp extends Component {
     }
   }
 
-
   render() {
     const { isError } = this.state;
 
@@ -59,6 +249,7 @@ class SignUp extends Component {
         <div className="container">
           <div className="page-header text-center">
             <h1>Welcome to BookIt!</h1>
+            <h3>Sign Up Here</h3>
           </div>
 
           <div className="row">
@@ -71,7 +262,6 @@ class SignUp extends Component {
                     <input type="text" id="firstname" name="firstname" value={this.state.firstname} placeholder="First Name"
                       className={isError.firstname.length > 6 ? "is-invalid form-control" : "form-control"} onChange={this.handleChange} required />
                     <span className="invalid-feedback">{Parser(isError.firstname)}</span>
-                   
                   </div>
                 </div>
 
@@ -128,7 +318,6 @@ class SignUp extends Component {
 
                 <div className="form-group ">
                   <div className="form-check checkbox-xl">
-        
                     <input type="checkbox" id="accept-terms" className="form-check-input" required disabled />
 
                     <button type="button" id="termsmodal" className="btn btn-primary" data-toggle="modal" data-target="#TmersModal">
@@ -139,12 +328,35 @@ class SignUp extends Component {
                 </div>
                 <div className="text-center">
                   <button type="submit" className="btn btn-primary" data-toggle="modal" data-target="#signResultModal" >Sign Up</button>
-                  <p>Already a member? <Link to='/'> Log In </Link></p>
+                  <p>Already a member? <Link to='/Login'> Log In </Link></p>
                 </div>
               </div>
             </form>
 
-            
+
+            <div className="col-xs-6 col-md-4">
+              <div className="resbox">
+                <h4>Be part of BookIt</h4>
+                <p>Want to advertise your restaurant? Sign Up here and be part of the BookIt Family!</p>
+                <div className="text-center">
+                  <Link to="/RestaurantSignUp">
+                    <button className="btn btn-primary">Restaurant Sign Up</button>
+                  </Link>
+                </div>
+              </div>
+              {/* GoogleSignUp */}
+              {this.getContent()}
+              <br></br>
+              <FacebookLogin
+                appId="186311976091336"
+                //autoLoad={true}
+                callback={responseFacebook}
+                render={renderProps => (
+                  <button onClick={renderProps.onClick}><img src={Facebook} alt="" /></button>
+                )}
+              />
+            </div>
+
           </div>
 
           <div className="modal fade" id="TmersModal" tabIndex="-1" role="dialog" aria-labelledby="TermsModalLabel" aria-hidden="true">
